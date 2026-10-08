@@ -98,6 +98,29 @@ bool is_history_ref(const std::string &str) {
 bool is_history_cmd(const Pipeline &cmds) {
 	return cmds.commands.size() == 1 && cmds.commands[0].args[0] == "history";
 }
+bool change_dir(const Command &cmd) {
+	if (cmd.args.size() > 2) {
+		std::cerr << "Too many arguments\n";
+		return false;
+	}
+	if (cmd.args.size() == 1) {
+		std::cerr << "Must specify path\n";
+		return false;
+	}
+
+	if (chdir(cmd.args[1].data()) == -1) {
+		if (errno == ENOENT)
+			std::cerr << "Could not find specified path " << cmd.args[1]
+					  << '\n';
+		else if (errno == ENOTDIR)
+			std::cerr << "Specified path " << cmd.args[1]
+					  << " is not a directory" << '\n';
+		else
+			std::cerr << "Command cd failed\n";
+		return false;
+	}
+	return true;
+}
 
 std::vector<char *> to_argv(Command &cmd) {
 	std::vector<char *> argv;
@@ -130,7 +153,7 @@ void execute(Command &cmd) {
 		if (out_fd == -1) {
 			if (errno == EEXIST)
 				std::cerr << "Failed to open file " << cmd.out_file
-						  << ". Use >! to overwrite existing file." << '\n';
+						  << ". Use >! to overwrite existing file.\n";
 			else
 				std::cerr << "Failed to open file " << cmd.out_file << '\n';
 			_exit(1);
@@ -142,13 +165,17 @@ void execute(Command &cmd) {
 		hist.print();
 		std::cout.flush();
 		_exit(0);
-	} else if (!cmd.args[0].empty() && (cmd.args[0][0] == '!')) {
 	}
 	execvp(argv[0], argv.data());
 	std::cerr << argv[0] << ": command not found." << '\n';
 }
 
 void evaluate(Pipeline &cmds) {
+	if (cmds.commands.size() == 1 && (cmds.commands[0].args[0] == "cd")) {
+		if (change_dir(cmds.commands[0]))
+			hist.add(cmds);
+		return;
+	}
 	// data from previous pipe
 	int prev_fd = -1;
 	pid_t last_pid = -1;

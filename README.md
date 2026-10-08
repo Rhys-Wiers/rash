@@ -47,6 +47,6 @@ Failed commands and `history` itself are not saved. History is not kept between 
 ## Limitations
 
 - Tokens must be separated by spaces (`ls > out`, not `ls>out`)
-- No quoting, `cd`, background jobs (`&`), `>>`, or `2>`
+- No quoting, background jobs (`&`), `>>`, or `2>`
 - Arguments after a redirect are ignored
 - `!n` must be the whole line
